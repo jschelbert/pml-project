@@ -1,5 +1,6 @@
 ---
-title: "Practical Machine Learning - Course Project"
+title: "Classifying quality of weight lifting using sensor data"
+subtitle: "Practical Machine Learning - Course Project"
 author: "Jakob Schelbert"
 date: "10.1.2017"
 output: html_document
@@ -8,11 +9,17 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
+library(ggplot2)
 library(caret)
 library(readr)
+library(doMC)
+registerDoMC(4)
 ```
 
-```{r load_data}
+# Executive Summary
+
+# Background Of Raw Data
+```{r load_data, cache=TRUE, message=FALSE}
 url1 <-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
 datafile1 <- "pml-training.csv"
 if (!file.exists(datafile1)) {
@@ -23,10 +30,81 @@ datafile2 <- "pml-testing.csv"
 if (!file.exists(datafile2)) {
   download.file(url2, datafile2)
 }
-training <- read_csv("pml-training.csv")
-testing <- read_csv("pml-testing.csv")
+training <- read_csv("pml-training.csv", col_types = cols(
+  user_name = "c",
+  raw_timestamp_part_1 = "d",
+  raw_timestamp_part_2 = "d",
+  cvtd_timestamp = col_datetime(format = "%d/%m/%Y %H:%M"),
+  new_window = "c",
+  classe = col_factor(c("A","B","C","D","E")),
+  .default = col_double())
+  )
+testing <- read_csv("pml-testing.csv", col_types = cols(
+  user_name = "c",
+  raw_timestamp_part_1 = "d",
+  raw_timestamp_part_2 = "d",
+  cvtd_timestamp = col_datetime(format = "%d/%m/%Y %H:%M"),
+  new_window = "c",
+  problem_id = "i",
+  .default = col_double())
+  )
+```
+The data was originally created in the paper *Qualitative Activity Recognition of Weight Lifting Exercises* by Velloso, Bulling, Gellersen, Ugulino, and Fuks.
+More information can be found on the corresponding [website](http://groupware.les.inf.puc-rio.br/har). 
+
+> Participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: 
+> exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E). 
+> Class A  corresponds  to  the  specified  execution  of  the  exercise, while  the  other  4  classes  correspond  to  common  mistakes.
+
+# Exploratory Analysis
+```{r exploratory_analysis}
+dim(training)
+dim(testing)
+
+
+names <- names(training)
+blah <- training %>% select(
+  X1,
+  user_name,
+  raw_timestamp_part_1,
+  raw_timestamp_part_2,
+  new_window,
+  num_window,
+  classe
+  )
+
+train_condensed <-
+  training %>% select(-contains("kurtosis_"),
+                      -contains("skewness_"),
+                      -contains("max_"),
+                      -contains("min_"),
+                      -contains("amplitude_"),
+                      -contains("var_"),
+                      -contains("avg_"),
+                      -contains("stddev_")
+                      )
+
+
+summary(train_condensed)
+
+ggplot(aes(x=classe, fill=user_name), data=train_condensed) + geom_bar()
+
+model1 <- train(classe~., data=train_condensed[,8:60], method="rf")
+
 ```
 
 
+# Building A Predictor
+
+## Feature Selection
+
+## Evaluation
+
+## Comparison To The Original Paper
 
 
+
+# Copyright
+This report is released unter **CC BY-SA**.
+
+[![](by-sa.png)](https://creativecommons.org/licenses/by-sa/3.0/)
