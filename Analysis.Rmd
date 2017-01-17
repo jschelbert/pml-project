@@ -8,12 +8,14 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(plyr)
 library(dplyr)
 library(ggplot2)
 library(caret)
 library(readr)
 library(doMC)
 registerDoMC(4)
+set.seed(12345)
 ```
 
 # Executive Summary
@@ -89,16 +91,35 @@ summary(train_condensed)
 
 ggplot(aes(x=classe, fill=user_name), data=train_condensed) + geom_bar()
 
-model1 <- train(classe~., data=train_condensed[,8:60], method="rf")
+
 
 ```
 
 
 # Building A Predictor
 
+```{r}
+inTrain <- createDataPartition(train_condensed$classe, p = 3/4)[[1]]
+training_train <- train_condensed[inTrain,]
+training_test <-train_condensed[-inTrain,]
+```
+
+
 ## Feature Selection
+```{r}
+model1 <- train(classe~., data = training_train[,8:60], method = "rf", importance = TRUE)
+#model1 <- train(classe~., data = training_train[,8:60], method = "rf", importance = TRUE, do.trace=TRUE, preProcess="pca")
+#model1 <- train(classe~., data=train_condensed[,8:60], method="rf")
+
+data.frame(model1$finalModel$importance)
+```
 
 ## Evaluation
+```{r}
+pred1 <- predict(model1,newdata=training_test)
+confusionMatrix(pred1, reference = training_test$classe)
+```
+
 
 ## Comparison To The Original Paper
 
