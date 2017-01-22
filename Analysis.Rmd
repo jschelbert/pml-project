@@ -7,7 +7,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, cache=TRUE)
+knitr::opts_chunk$set(echo = TRUE)
 library(plyr)
 library(dplyr)
 library(ggplot2)
@@ -19,6 +19,11 @@ set.seed(12345)
 ```
 
 # Executive Summary
+Fitness tracker or smart watches see an increasing popularity these days.
+A promising application of the activity data collected by these devices is to give advice to the user how to improve their activity execution.
+As a first step towards such an application we study a data set which consists of several participants executing dumbell lifting in a correct and in several wrong ways.
+We aim to build a classifier that can distinguish between these different ways in a precise manner.
+Random forrest and the C5.0 algorithm perform best on the data set and give an accuracy of 99%.
 
 
 # Background Of Raw Data
@@ -56,7 +61,7 @@ testing <- read_csv("pml-testing.csv", col_types = cols(
 ```
 The data was originally created in the paper *Qualitative Activity Recognition of Weight Lifting Exercises* by Velloso, Bulling, Gellersen, Ugulino, and Fuks.
 More information can be found on the corresponding [website](http://groupware.les.inf.puc-rio.br/har). 
-
+THe authors describe the process of obtaining the data set as the following:
 > Participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: 
 > exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E). 
 > Class A  corresponds  to  the  specified  execution  of  the  exercise, while  the  other  4  classes  correspond  to  common  mistakes.
@@ -65,37 +70,16 @@ More information can be found on the corresponding [website](http://groupware.le
 ```{r exploratory_analysis}
 dim(training)
 dim(testing)
-
-
-names <- names(training)
-blah <- training %>% select(
-  X1,
-  user_name,
-  raw_timestamp_part_1,
-  raw_timestamp_part_2,
-  new_window,
-  num_window,
-  classe
-  )
-
-train_condensed <-
-  training %>% select(-contains("kurtosis_"),
-                      -contains("skewness_"),
-                      -contains("max_"),
-                      -contains("min_"),
-                      -contains("amplitude_"),
-                      -contains("var_"),
-                      -contains("avg_"),
-                      -contains("stddev_")
-                      )
-
-
-summary(train_condensed)
-
+#names <- names(training)
+train_condensed <- training %>% select(-contains("kurtosis_"),
+                                       -contains("skewness_"),
+                                       -contains("max_"),
+                                       -contains("min_"),
+                                       -contains("amplitude_"),
+                                       -contains("var_"),
+                                       -contains("avg_"),
+                                       -contains("stddev_"))
 ggplot(aes(x=classe, fill=user_name), data=train_condensed) + geom_bar()
-
-
-
 ```
 
 

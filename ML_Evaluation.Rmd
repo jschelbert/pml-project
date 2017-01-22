@@ -132,7 +132,7 @@ fit.extraTrees <- train(classe~., data = training_train[,8:60], method = "extraT
 #model1 <- train(classe~., data = training_train[,8:60], method = "rf", importance = TRUE, do.trace=TRUE, preProcess="pca")
 #model1 <- train(classe~., data=train_condensed[,8:60], method="rf")
 
-data.frame(model1$finalModel$importance)
+data.frame(fit.rf$finalModel$importance) %>% tibble::rownames_to_column(var="Names") %>% arrange(desc(MeanDecreaseGini))
 ```
 
 ## Evaluation
@@ -175,7 +175,7 @@ confusionMatrix(pred.svmRadial, reference = training_test$classe)
 ```{r}
 results <- resamples(list(lda=fit.lda, glmnet=fit.glmnet,
 	svmRadial=fit.svmRadial, knn=fit.knn, nb=fit.nb, cart=fit.cart, c50=fit.c50,
-	treebag=fit.treebag, rf=fit.rf, gbm=fit.gbm))
+	treebag=fit.treebag, rf=fit.rf, gbm=fit.gbm), decreasing = TRUE)
 # Table comparison
 summary(results)
 bwplot(results)
