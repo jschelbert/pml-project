@@ -7,7 +7,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE)
 library(plyr)
 library(dplyr)
 library(ggplot2)
@@ -20,8 +20,11 @@ set.seed(12345)
 
 # Executive Summary
 
+
 # Background Of Raw Data
-```{r load_data, cache=TRUE, message=FALSE}
+We begin our analysis by loading the data.
+Note that there are some special treatments necessary to load all columns as their correct type (especially column `datetime`).
+```{r load_data, cache=TRUE, message=FALSE, warning=FALSE}
 url1 <-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
 datafile1 <- "pml-training.csv"
 if (!file.exists(datafile1)) {
@@ -98,7 +101,7 @@ ggplot(aes(x=classe, fill=user_name), data=train_condensed) + geom_bar()
 
 # Building A Predictor
 
-```{r}
+```{r traindata_setup, cache=TRUE}
 inTrain <- createDataPartition(train_condensed$classe, p = 3/4)[[1]]
 training_train <- train_condensed[inTrain,]
 training_test <-train_condensed[-inTrain,]
@@ -106,16 +109,14 @@ training_test <-train_condensed[-inTrain,]
 
 
 ## Feature Selection
-```{r}
+```{r train_rf, cache=TRUE}
 model1 <- train(classe~., data = training_train[,8:60], method = "rf", importance = TRUE)
-#model1 <- train(classe~., data = training_train[,8:60], method = "rf", importance = TRUE, do.trace=TRUE, preProcess="pca")
-#model1 <- train(classe~., data=train_condensed[,8:60], method="rf")
 
 data.frame(model1$finalModel$importance)
 ```
 
 ## Evaluation
-```{r}
+```{r predict, cache=TRUE}
 pred1 <- predict(model1,newdata=training_test)
 confusionMatrix(pred1, reference = training_test$classe)
 ```
@@ -123,9 +124,72 @@ confusionMatrix(pred1, reference = training_test$classe)
 
 ## Comparison To The Original Paper
 
+# Appendix
 
+## Spot-Checking
 
-# Copyright
+```{r train_algos, cache=TRUE}
+control <- trainControl(method="repeatedcv", number=10, repeats=3)
+seed <- 12345
+metric <- "Accuracy"
+
+# Linear Discriminant Analysis
+set.seed(seed)
+fit.lda <- train(classe~., data = training_train[,8:60], method="lda", metric=metric, preProc=c("center", "scale"), trControl=control)
+# GLMNET
+set.seed(seed)
+fit.glmnet <- train(classe~., data = training_train[,8:60], method="glmnet", metric=metric, preProc=c("center", "scale"), trControl=control)
+# SVM Radial
+set.seed(seed)
+fit.svmRadial <- train(classe~., data = training_train[,8:60], method="svmRadial", metric=metric, preProc=c("center", "scale"), trControl=control, fit=FALSE)
+# kNN
+set.seed(seed)
+fit.knn <- train(classe~., data = training_train[,8:60], method="knn", metric=metric, preProc=c("center", "scale"), trControl=control)
+# Naive Bayes
+set.seed(seed)
+fit.nb <- train(classe~., data = training_train[,8:60], method="nb", metric=metric, trControl=control)
+# CART
+set.seed(seed)
+fit.cart <- train(classe~., data = training_train[,8:60], method="rpart", metric=metric, trControl=control)
+# C5.0
+set.seed(seed)
+fit.c50 <- train(classe~., data = training_train[,8:60], method="C5.0", metric=metric, trControl=control)
+# Bagged CART
+set.seed(seed)
+fit.treebag <- train(classe~., data = training_train[,8:60], method="treebag", metric=metric, trControl=control)
+# Random Forest
+set.seed(seed)
+fit.rf <- train(classe~., data = training_train[,8:60], method="rf", metric=metric, trControl=control)
+# Stochastic Gradient Boosting (Generalized Boosted Modeling)
+set.seed(seed)
+fit.gbm <- train(classe~., data = training_train[,8:60], method="gbm", metric=metric, trControl=control, verbose=FALSE)
+# Another random forrest implementation
+set.seed(seed)
+fit.Rborist <- train(classe~., data = training_train[,8:60], method = "Rborist", importance = TRUE)
+```
+
+```{r algos_results, cache=TRUE}
+results <- resamples(list(lda=fit.lda, glmnet=fit.glmnet,
+	svmRadial=fit.svmRadial, knn=fit.knn, nb=fit.nb, cart=fit.cart, c50=fit.c50,
+	treebag=fit.treebag, rf=fit.rf, gbm=fit.gbm), decreasing = TRUE)
+# Table comparison
+summary(results)
+bwplot(results)
+```
+
+# Appendix
+
+## Copyright
 This report is released unter **CC BY-SA**.
 
 [![](by-sa.png)](https://creativecommons.org/licenses/by-sa/3.0/)
+
+## Code
+```{r, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE, tidy=TRUE}
+```
+
+## Used packages and information on computer
+```{r}
+sessionInfo()
+```
+
