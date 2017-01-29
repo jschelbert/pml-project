@@ -2,8 +2,11 @@
 title: "Classifying quality of weight lifting using sensor data"
 subtitle: "Practical Machine Learning - Course Project"
 author: "Jakob Schelbert"
-date: "10.1.2017"
-output: html_document
+date: "29.1.2017"
+output: 
+  html_document:
+    keep_md: yes
+    theme: cerulean
 ---
 
 ```{r setup, include=FALSE}
@@ -12,10 +15,12 @@ library(plyr)
 library(dplyr)
 library(ggplot2)
 library(caret)
+library(knitr)
 library(readr)
 library(doMC)
 registerDoMC(4)
-set.seed(12345)
+seed <- 12345
+set.seed(seed)
 ```
 
 # Executive Summary
@@ -61,16 +66,22 @@ testing <- read_csv("pml-testing.csv", col_types = cols(
 ```
 The data was originally created in the paper *Qualitative Activity Recognition of Weight Lifting Exercises* by Velloso, Bulling, Gellersen, Ugulino, and Fuks.
 More information can be found on the corresponding [website](http://groupware.les.inf.puc-rio.br/har). 
-THe authors describe the process of obtaining the data set as the following:
+The authors describe the process of obtaining the data set as the following:
+
 > Participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: 
 > exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E). 
 > Class A  corresponds  to  the  specified  execution  of  the  exercise, while  the  other  4  classes  correspond  to  common  mistakes.
 
 # Exploratory Analysis
-```{r exploratory_analysis}
-dim(training)
-dim(testing)
-#names <- names(training)
+We start by examining the data.
+The training data consists of nearly 20000 samples and has 160 variables.
+The first columns consits of some information about the sample, e.g. the date the sample was obtained, the person performing the activity while the sample was taken etc.
+There are 100 columns that predominantly contain NAs which stems from the fact that these colums aggregate data from other samples within a certain time window.
+Thus, to have only columns without NAs we leave these columns out of our preprocessed training set.
+
+```{r exploratory_analysis, cache=TRUE}
+dim_train <- dim(training)
+dim_test <- dim(testing)
 train_condensed <- training %>% select(-contains("kurtosis_"),
                                        -contains("skewness_"),
                                        -contains("max_"),
@@ -79,42 +90,86 @@ train_condensed <- training %>% select(-contains("kurtosis_"),
                                        -contains("var_"),
                                        -contains("avg_"),
                                        -contains("stddev_"))
-ggplot(aes(x=classe, fill=user_name), data=train_condensed) + geom_bar()
+ggplot(aes(x=classe, fill=user_name), data=train_condensed) + geom_bar() + labs(x="Activity class", fill="Participant")
 ```
 
+We can see in the figure that activity class A has the most samples, while class D has the least.
+For all participants the samples are consistently distributed among the different classes, therefore, we do not have to do some processing to handle different participants.
 
 # Building A Predictor
-
+For builing the predictor we first divide the training set further to be able to estimate an out-of-sample error.
 ```{r traindata_setup, cache=TRUE}
 inTrain <- createDataPartition(train_condensed$classe, p = 3/4)[[1]]
 training_train <- train_condensed[inTrain,]
 training_test <-train_condensed[-inTrain,]
 ```
+We will use the about 75% of the training set for our training (`training_train`) and the remaining 25% for measuring the performance (using `training_test`).
 
-
-## Feature Selection
-```{r train_rf, cache=TRUE}
-model1 <- train(classe~., data = training_train[,8:60], method = "rf", importance = TRUE)
-
-data.frame(model1$finalModel$importance)
+## Training the algorithm
+For our model we tried several different algorithms.
+See the appendix section [Spot checking](#spot-checking) for some explanation and comparison of different algorithms.
+The best performing algorithm was C5.0 (or see5) that is the successor of the famour C4.5 algorithm and uses decision trees to build a model.
+For more information see [Wikipedia](https://en.wikipedia.org/wiki/C4.5_algorithm#Improvements_in_C5.0.2FSee5_algorithm) or the authors [homepage](http://www.rulequest.com/see5-unix.html).
+```{r train_c50, cache=TRUE}
+set.seed(seed)
+model_c50 <- train(classe~., data = training_train[,8:60], method = "C5.0", importance = TRUE)
 ```
+
+We also utilize the second best performing algorithm random forrest (`rf`).
+```{r train_rf, cache=TRUE}
+set.seed(seed)
+model_rf <- train(classe~., data = training_train[,8:60], method = "rf", importance = TRUE)
+```
+
+It is interesting to also extract the importance of the variables.
+If we want to build a small model (for example to fit in a smartwatch or fitness tracker) we could use this data to find the most promising variables to use in a small model.
+```{r importance, cache=TRUE}
+importance_rf <- data.frame(model_rf$finalModel$importance)
+kable(importance_rf %>% tibble::rownames_to_column("Variable") %>% arrange(desc(MeanDecreaseAccuracy)) %>% head(10))
+```
+We can observe that under the top 10 variables most are associated with either the belt or the dumbell.
+This could be a good indicator to further investigate these sensors or put increased emphasis on the development of the sensors.
+
 
 ## Evaluation
+To evaluate the out-of-sample error we use our separated test set (`training_test`) to calculate predictions based on the fitted models.
+A comparison with the correct activity classes reveals very promising accuracy of over 99% for both C5.0 and random forrest.
+One outstanding result is that C5.0 can classify the correct activity execution (class A) without error.
+This is important since correct execution of the activity is indeed classified as such.
 ```{r predict, cache=TRUE}
-pred1 <- predict(model1,newdata=training_test)
-confusionMatrix(pred1, reference = training_test$classe)
+pred_rf <- predict(model_rf, newdata=training_test)
+pred_c50 <- predict(model_c50, newdata=training_test)
+confusionMatrix(pred_rf, reference = training_test$classe)
+confusionMatrix(pred_c50, reference = training_test$classe)
 ```
 
+## Conclusion
+We trained two models with data from activity sensors.
+Both C5.0 as well as random forrests perform very good and deliver an accuracy of over 99%.
+Further room for improvement could be to evaluate the importance of the variables to build a light-weight prediction model.
+Also, a classification that has an even higher specificity for class A (correct activity execution) could help to detect wrong execution of the user.
 
-## Comparison To The Original Paper
 
 # Appendix
+In the appendix we state the spot-checking code that compares several differnt algorithms to get a good starting point which methods should be investigated further.
+We also include all the used code and some info on the package versions.
+Note that the original github repository of this project can be found [here](https://github.com/jschelbert/pml-project).
 
 ## Spot-Checking
-
+In order to find the best algorithm for our prediction problem we tested several common packages that can be efficiently used within the `caret` package.
+More precisely, we tested
+* Linear discriminant analysis (method `lda`)
+* Logistic regression (method `glm`)
+* Neural net (method `glmnet`)
+* Support vector machine - SVM (method `svmRadial`)
+* K-nearest-neigbour (method `knn`)
+* C5.0 (method `c50`)
+* CART (method `cart`)
+* Naive Bayes (method `nb`)
+* Random forrest (methods `rf` and `Rborist`)
+* Bagged CART (method `treebag`)
 ```{r train_algos, cache=TRUE}
 control <- trainControl(method="repeatedcv", number=10, repeats=3)
-seed <- 12345
 metric <- "Accuracy"
 
 # Linear Discriminant Analysis
@@ -149,19 +204,22 @@ set.seed(seed)
 fit.gbm <- train(classe~., data = training_train[,8:60], method="gbm", metric=metric, trControl=control, verbose=FALSE)
 # Another random forrest implementation
 set.seed(seed)
-fit.Rborist <- train(classe~., data = training_train[,8:60], method = "Rborist", importance = TRUE)
+fit.Rborist <- train(classe~., data = training_train[,8:60], method = "Rborist", metric=metric, trControl=control)
 ```
-
+Using the resulting models we can utilize the `resamples` function to show an overview of the accuracy and kappa of each model.
+It is clear that random forrest, C5.0 and bagged CART (`treebag`) give very good results.
 ```{r algos_results, cache=TRUE}
 results <- resamples(list(lda=fit.lda, glmnet=fit.glmnet,
 	svmRadial=fit.svmRadial, knn=fit.knn, nb=fit.nb, cart=fit.cart, c50=fit.c50,
-	treebag=fit.treebag, rf=fit.rf, gbm=fit.gbm), decreasing = TRUE)
+	treebag=fit.treebag, rf=fit.rf, gbm=fit.gbm, Rborist=fit.Rborist), decreasing = TRUE)
 # Table comparison
-summary(results)
-bwplot(results)
+kable(summary(results)$statistics$Accuracy)
 ```
 
-# Appendix
+A graphical representation of the results is given by the following boxplot.
+```{r bwplot, cache=TRUE}
+bwplot(results)
+```
 
 ## Copyright
 This report is released unter **CC BY-SA**.
@@ -169,7 +227,7 @@ This report is released unter **CC BY-SA**.
 [![](by-sa.png)](https://creativecommons.org/licenses/by-sa/3.0/)
 
 ## Code
-```{r, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE, tidy=TRUE}
+```{r, ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE, tidy=TRUE}
 ```
 
 ## Used packages and information on computer
