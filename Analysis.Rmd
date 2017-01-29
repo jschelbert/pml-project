@@ -127,6 +127,7 @@ If we want to build a small model (for example to fit in a smartwatch or fitness
 importance_rf <- data.frame(model_rf$finalModel$importance)
 kable(importance_rf %>% tibble::rownames_to_column("Variable") %>% arrange(desc(MeanDecreaseAccuracy)) %>% head(10))
 ```
+
 We can observe that under the top 10 variables most are associated with either the belt or the dumbell.
 This could be a good indicator to further investigate these sensors or put increased emphasis on the development of the sensors.
 
@@ -142,6 +143,7 @@ pred_c50 <- predict(model_c50, newdata=training_test)
 confusionMatrix(pred_rf, reference = training_test$classe)
 confusionMatrix(pred_c50, reference = training_test$classe)
 ```
+
 
 ## Conclusion
 We trained two models with data from activity sensors.
