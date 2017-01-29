@@ -187,10 +187,10 @@ ggplot(aes(x=classe, fill=user_name), data=train_condensed) + geom_bar() + labs(
 <pre class="r"><code>inTrain &lt;- createDataPartition(train_condensed$classe, p = 3/4)[[1]]
 training_train &lt;- train_condensed[inTrain,]
 training_test &lt;-train_condensed[-inTrain,]</code></pre>
-<p>We will use the about 75% of the training set for our training (<code>training_train</code>) and the remaining 25% for measuring the performance (using <code>training_test</code>).</p>
+<p>We will use the about 75% of the training set for our training (<code>training_train</code>) and the remaining 25% for measuring the performance and estimating the out-of-sample error (using <code>training_test</code>).</p>
 <div id="training-the-algorithm" class="section level2">
 <h2>Training the algorithm</h2>
-<p>For our model we tried several different algorithms. See the appendix section <a href="#spot-checking">Spot checking</a> for some explanation and comparison of different algorithms. The best performing algorithm was C5.0 (or see5) that is the successor of the famour C4.5 algorithm and uses decision trees to build a model. For more information see <a href="https://en.wikipedia.org/wiki/C4.5_algorithm#Improvements_in_C5.0.2FSee5_algorithm">Wikipedia</a> or the authors <a href="http://www.rulequest.com/see5-unix.html">homepage</a>.</p>
+<p>For our model we tried several different algorithms. Notice that the used <code>caret</code> package uses bootstrapping when given default parameters for training. See the appendix section <a href="#spot-checking">Spot checking</a> for some explanation and comparison of different algorithms. The best performing algorithm was C5.0 (or see5) that is the successor of the famour C4.5 algorithm and uses decision trees to build a model. For more information see <a href="https://en.wikipedia.org/wiki/C4.5_algorithm#Improvements_in_C5.0.2FSee5_algorithm">Wikipedia</a> or the authors <a href="http://www.rulequest.com/see5-unix.html">homepage</a>.</p>
 <pre class="r"><code>set.seed(seed)
 model_c50 &lt;- train(classe~., data = training_train[,8:60], method = &quot;C5.0&quot;, importance = TRUE)</code></pre>
 <pre><code>## Loading required package: C50</code></pre>
@@ -398,10 +398,11 @@ confusionMatrix(pred_rf, reference = training_test$classe)</code></pre>
 ## Detection Rate         0.2845   0.1913   0.1727   0.1633   0.1835
 ## Detection Prevalence   0.2857   0.1921   0.1743   0.1644   0.1835
 ## Balanced Accuracy      0.9991   0.9937   0.9943   0.9975   0.9994</code></pre>
+<p>More precisely we report a out-of-sample accuracy for C5.0 of 0.99531 (or out-of-sample error of 0.00469. Likewise the out-of-sample accuracy for random forrest is 0.992863 (or out-of-sample error of 0.007137.</p>
 </div>
 <div id="conclusion" class="section level2">
 <h2>Conclusion</h2>
-<p>We trained two models with data from activity sensors. Both C5.0 as well as random forrests perform very good and deliver an accuracy of over 99%. Further room for improvement could be to evaluate the importance of the variables to build a light-weight prediction model. Also, a classification that has an even higher specificity for class A (correct activity execution) could help to detect wrong execution of the user.</p>
+<p>We trained two models with data from activity sensors. Both C5.0 as well as random forrests perform very good and deliver an accuracy of over 99%, thus, a out-of-sample error under 1%. Further room for improvement could be to evaluate the importance of the variables to build a light-weight prediction model. Also, a classification that has an even higher specificity for class A (correct activity execution) could help to detect wrong execution of the user.</p>
 </div>
 </div>
 <div id="appendix" class="section level1">
@@ -747,19 +748,20 @@ sessionInfo()</code></pre>
 ## 
 ## loaded via a namespace (and not attached):
 ##  [1] Rcpp_0.12.9        formatR_1.4        nloptr_1.0.4      
-##  [4] tools_3.3.2        digest_0.6.11      lme4_1.1-12       
-##  [7] evaluate_0.10      tibble_1.2         gtable_0.2.0      
-## [10] nlme_3.1-128       mgcv_1.8-16        Matrix_1.2-8      
-## [13] DBI_0.5-1          yaml_2.1.14        SparseM_1.74      
-## [16] stringr_1.1.0      MatrixModels_0.4-1 stats4_3.3.2      
-## [19] rprojroot_1.2      grid_3.3.2         nnet_7.3-12       
-## [22] R6_2.2.0           rmarkdown_1.3      minqa_1.2.4       
-## [25] reshape2_1.4.2     car_2.1-4          magrittr_1.5      
-## [28] backports_1.0.5    scales_0.4.1       codetools_0.2-15  
-## [31] ModelMetrics_1.1.0 htmltools_0.3.5    MASS_7.3-45       
-## [34] splines_3.3.2      assertthat_0.1     pbkrtest_0.4-6    
-## [37] colorspace_1.3-2   quantreg_5.29      stringi_1.1.2     
-## [40] lazyeval_0.2.0     munsell_0.4.3</code></pre>
+##  [4] class_7.3-14       tools_3.3.2        digest_0.6.11     
+##  [7] lme4_1.1-12        evaluate_0.10      tibble_1.2        
+## [10] gtable_0.2.0       nlme_3.1-128       mgcv_1.8-16       
+## [13] Matrix_1.2-8       DBI_0.5-1          yaml_2.1.14       
+## [16] SparseM_1.74       e1071_1.6-7        stringr_1.1.0     
+## [19] MatrixModels_0.4-1 stats4_3.3.2       rprojroot_1.2     
+## [22] grid_3.3.2         nnet_7.3-12        R6_2.2.0          
+## [25] rmarkdown_1.3      minqa_1.2.4        reshape2_1.4.2    
+## [28] car_2.1-4          magrittr_1.5       backports_1.0.5   
+## [31] scales_0.4.1       codetools_0.2-15   ModelMetrics_1.1.0
+## [34] htmltools_0.3.5    MASS_7.3-45        splines_3.3.2     
+## [37] assertthat_0.1     pbkrtest_0.4-6     colorspace_1.3-2  
+## [40] quantreg_5.29      stringi_1.1.2      lazyeval_0.2.0    
+## [43] munsell_0.4.3</code></pre>
 </div>
 </div>
 

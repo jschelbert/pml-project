@@ -103,10 +103,11 @@ inTrain <- createDataPartition(train_condensed$classe, p = 3/4)[[1]]
 training_train <- train_condensed[inTrain,]
 training_test <-train_condensed[-inTrain,]
 ```
-We will use the about 75% of the training set for our training (`training_train`) and the remaining 25% for measuring the performance (using `training_test`).
+We will use the about 75% of the training set for our training (`training_train`) and the remaining 25% for measuring the performance and estimating the out-of-sample error (using `training_test`).
 
 ## Training the algorithm
 For our model we tried several different algorithms.
+Notice that the used `caret` package uses bootstrapping when given default parameters for training.
 See the appendix section [Spot checking](#spot-checking) for some explanation and comparison of different algorithms.
 The best performing algorithm was C5.0 (or see5) that is the successor of the famour C4.5 algorithm and uses decision trees to build a model.
 For more information see [Wikipedia](https://en.wikipedia.org/wiki/C4.5_algorithm#Improvements_in_C5.0.2FSee5_algorithm) or the authors [homepage](http://www.rulequest.com/see5-unix.html).
@@ -143,11 +144,13 @@ pred_c50 <- predict(model_c50, newdata=training_test)
 confusionMatrix(pred_rf, reference = training_test$classe)
 confusionMatrix(pred_c50, reference = training_test$classe)
 ```
+More precisely we report a out-of-sample accuracy for C5.0 of `r confusionMatrix(pred_c50, reference = training_test$classe)$overall[1]` (or out-of-sample error of `r 1-confusionMatrix(pred_c50, reference = training_test$classe)$overall[1]`.
+Likewise the out-of-sample accuracy for random forrest is `r confusionMatrix(pred_rf, reference = training_test$classe)$overall[1]` (or out-of-sample error of `r 1-confusionMatrix(pred_rf, reference = training_test$classe)$overall[1]`.
 
 
 ## Conclusion
 We trained two models with data from activity sensors.
-Both C5.0 as well as random forrests perform very good and deliver an accuracy of over 99%.
+Both C5.0 as well as random forrests perform very good and deliver an accuracy of over 99%, thus, a out-of-sample error under 1%.
 Further room for improvement could be to evaluate the importance of the variables to build a light-weight prediction model.
 Also, a classification that has an even higher specificity for class A (correct activity execution) could help to detect wrong execution of the user.
 
